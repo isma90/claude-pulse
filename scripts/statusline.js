@@ -5,6 +5,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('node:crypto');
 const { spawnSync } = require('child_process');
 
 // ─── ANSI helpers ────────────────────────────────────────────────────────────
@@ -314,7 +315,8 @@ function segGraphify(data) {
     const dir = data?.workspace?.current_dir;
     if (!dir) return null;
 
-    const cacheKey = `graphify-${Buffer.from(dir).toString('base64').slice(0, 32)}`;
+    // Fix: use SHA-1 hash to avoid base64 truncation collisions
+    const cacheKey = `graphify-${crypto.createHash('sha1').update(dir).digest('hex').slice(0, 16)}`;
     const cached   = cacheRead(cacheKey);
     const now      = Date.now();
     const TTL      = 60_000;
@@ -323,8 +325,9 @@ function segGraphify(data) {
       return cached.result;
     }
 
-    let active   = false;
+    let active    = false;
     let graphName = null;
+    let groupDir  = null;
 
     // 1. Check for SKILL.md installation
     try {
@@ -348,32 +351,50 @@ function segGraphify(data) {
       } catch { /* no graphify-out */ }
     }
 
-    // 4. Resolve graph name from ~/.graphify/projects.toml. A registered
-    //    source path also counts as active: graphify is often installed
-    //    globally, so the project may have no local SKILL.md or hooks.
+    // 4. Resolve graph name from ~/.graphify/projects.toml using longest-match.
+    //    Each [[group]] block has: name, dir (the graph git repo), and
+    //    [[group.source]] entries with path (the contributing source dirs).
+    //    cwd matches a group if it equals or is a descendant of any source path
+    //    OR the group dir itself. Winner = longest matched path.
     try {
       const tomlPath = path.join(os.homedir(), '.graphify', 'projects.toml');
       const toml     = fs.readFileSync(tomlPath, 'utf8');
 
-      // Tolerant regex TOML parser: find [[group]] blocks
-      // Each group has optional name = "..." and [[group.source]] entries with path = "..."
+      // Parse each [[group]] block into { name, dir, sources[] }
       const groupBlocks = toml.split(/(?=\[\[group\]\])/);
+      let bestMatchLen = -1;
+
       for (const block of groupBlocks) {
         if (!block.includes('[[group]]')) continue;
 
         const nameMatch = block.match(/^name\s*=\s*["']([^"']+)["']/m);
         const gName     = nameMatch ? nameMatch[1] : null;
 
-        // Find all path/dir values in source blocks
-        const pathMatches = block.matchAll(/(?:^|\n)\s*(?:path|dir)\s*=\s*["']([^"']+)["']/gm);
-        for (const m of pathMatches) {
-          const p = m[1].replace(/^~/, os.homedir());
+        // group-level dir = the graph repo dir (e.g. ~/.graphify/polaris)
+        const dirMatch  = block.match(/^dir\s*=\s*["']([^"']+)["']/m);
+        const gDir      = dirMatch ? dirMatch[1].replace(/^~/, os.homedir()) : null;
+
+        // source paths are under [[group.source]] blocks: path = "..."
+        const sourcePaths = [];
+        const sourceMatches = block.matchAll(/\[\[group\.source\]\][\s\S]*?(?=\[\[|$)/g);
+        for (const sm of sourceMatches) {
+          const pm = sm[0].match(/\bpath\s*=\s*["']([^"']+)["']/);
+          if (pm) sourcePaths.push(pm[1].replace(/^~/, os.homedir()));
+        }
+
+        // Candidate match paths: all sources + the group dir itself
+        const candidates = [...sourcePaths];
+        if (gDir) candidates.push(gDir);
+
+        for (const p of candidates) {
           if (dir === p || dir.startsWith(p + path.sep)) {
-            graphName = gName;
-            break;
+            if (p.length > bestMatchLen) {
+              bestMatchLen = p.length;
+              graphName    = gName;
+              groupDir     = gDir;
+            }
           }
         }
-        if (graphName !== null) break;
       }
     } catch { /* no toml or parse error */ }
 
@@ -384,9 +405,45 @@ function segGraphify(data) {
       return null;
     }
 
+    // 5. Determine sync state of the graph repo (no network, git local only)
+    let syncMarkers = '';
+    if (groupDir) {
+      try {
+        let dirty  = false;
+        let ahead  = 0;
+
+        const statusRes = spawnSync('git', ['-C', groupDir, 'status', '--porcelain'], {
+          timeout: 500,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+        if (statusRes.status === 0 && statusRes.stdout) {
+          dirty = statusRes.stdout.toString().trim().length > 0;
+        }
+
+        const aheadRes = spawnSync('git', ['-C', groupDir, 'rev-list', '--count', '@{u}..HEAD'], {
+          timeout: 500,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+        if (aheadRes.status === 0 && aheadRes.stdout) {
+          ahead = parseInt(aheadRes.stdout.toString().trim(), 10) || 0;
+        }
+
+        if (dirty || ahead > 0) {
+          const parts = [];
+          if (dirty)  parts.push('✱');
+          if (ahead > 0) parts.push(`⇡${ahead}`);
+          syncMarkers = ' ' + yellow(parts.join(''));
+        } else {
+          syncMarkers = ' ✓';
+        }
+      } catch { syncMarkers = ' ✓'; }
+    } else {
+      syncMarkers = ' ✓';
+    }
+
     const result = graphName
-      ? `🕸️ graphify:${graphName} ✓`
-      : `🕸️ graphify ✓`;
+      ? `🕸️ graphify:${graphName}${syncMarkers}`
+      : `🕸️ graphify${syncMarkers}`;
 
     cacheWrite(cacheKey, { result, ts: now });
     return result;
