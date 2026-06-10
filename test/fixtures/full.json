@@ -1,0 +1,32 @@
+{
+  "model": {
+    "display_name": "Claude Opus 4.6"
+  },
+  "workspace": {
+    "current_dir": "/Users/ismael.leiva/repos/github/graphify"
+  },
+  "session_id": "sess-full-001",
+  "transcript_path": "/tmp/claude-pulse-nonexistent-transcript-full.jsonl",
+  "cost": {
+    "total_cost_usd": 0.42,
+    "total_lines_added": 120,
+    "total_lines_removed": 30
+  },
+  "context_window": {
+    "total_input_tokens": 84000,
+    "total_output_tokens": 12000,
+    "context_window_size": 200000,
+    "used_percentage": 42.0
+  },
+  "exceeds_200k_tokens": false,
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 23.5,
+      "resets_at": 1749600000
+    },
+    "seven_day": {
+      "used_percentage": 41.2,
+      "resets_at": 1749945600
+    }
+  }
+}

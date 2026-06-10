@@ -1,0 +1,7 @@
+{
+  "name": "claude-pulse",
+  "description": "Rich statusline for Claude Code: context %, session tokens in/out, subscription usage (5h/7d), per-subagent tokens, graphify detection, free disk space",
+  "author": {
+    "name": "Ismael Leiva"
+  }
+}

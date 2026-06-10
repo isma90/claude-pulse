@@ -1,0 +1,22 @@
+{
+  "model": {
+    "display_name": "Claude Sonnet 4.6"
+  },
+  "workspace": {
+    "current_dir": "/Users/ismael.leiva/repos/github/graphify"
+  },
+  "session_id": "sess-norate-001",
+  "transcript_path": "/tmp/claude-pulse-nonexistent-transcript-norate.jsonl",
+  "cost": {
+    "total_cost_usd": 0.08,
+    "total_lines_added": 15,
+    "total_lines_removed": 5
+  },
+  "context_window": {
+    "total_input_tokens": 22000,
+    "total_output_tokens": 3200,
+    "context_window_size": 200000,
+    "used_percentage": 12.5
+  },
+  "exceeds_200k_tokens": false
+}

@@ -1,0 +1,9 @@
+# oh-my-claudecode internal agent state — never commit
+.omc/state/
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*

@@ -1,0 +1,30 @@
+{
+  "model": {
+    "display_name": "Claude Haiku 3.5"
+  },
+  "workspace": {
+    "current_dir": "/Users/ismael.leiva/repos/github/graphify"
+  },
+  "session_id": "sess-nullctx-001",
+  "transcript_path": "/tmp/claude-pulse-nonexistent-transcript-nullctx.jsonl",
+  "cost": {
+    "total_cost_usd": 0.01
+  },
+  "context_window": {
+    "total_input_tokens": null,
+    "total_output_tokens": null,
+    "context_window_size": null,
+    "used_percentage": null
+  },
+  "exceeds_200k_tokens": false,
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 87.3,
+      "resets_at": 1749610000
+    },
+    "seven_day": {
+      "used_percentage": 62.0,
+      "resets_at": 1749945600
+    }
+  }
+}

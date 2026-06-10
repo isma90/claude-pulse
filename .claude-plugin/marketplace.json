@@ -1,0 +1,16 @@
+{
+  "name": "claude-pulse",
+  "owner": {
+    "name": "Ismael Leiva"
+  },
+  "metadata": {
+    "description": "Marketplace for claude-pulse, a rich statusline plugin for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "claude-pulse",
+      "source": "./",
+      "description": "Rich statusline for Claude Code: context %, session tokens in/out, subscription usage (5h/7d), per-subagent tokens, graphify detection, free disk space"
+    }
+  ]
+}
