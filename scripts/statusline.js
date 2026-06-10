@@ -341,12 +341,16 @@ function segGraphify(data) {
       } catch { /* no settings.json */ }
     }
 
+    // 3. Check for a graphify output directory in the project
     if (!active) {
-      cacheWrite(cacheKey, { result: null, ts: now });
-      return null;
+      try {
+        if (fs.statSync(path.join(dir, 'graphify-out')).isDirectory()) active = true;
+      } catch { /* no graphify-out */ }
     }
 
-    // 3. Resolve graph name from ~/.graphify/projects.toml
+    // 4. Resolve graph name from ~/.graphify/projects.toml. A registered
+    //    source path also counts as active: graphify is often installed
+    //    globally, so the project may have no local SKILL.md or hooks.
     try {
       const tomlPath = path.join(os.homedir(), '.graphify', 'projects.toml');
       const toml     = fs.readFileSync(tomlPath, 'utf8');
@@ -364,14 +368,21 @@ function segGraphify(data) {
         const pathMatches = block.matchAll(/(?:^|\n)\s*(?:path|dir)\s*=\s*["']([^"']+)["']/gm);
         for (const m of pathMatches) {
           const p = m[1].replace(/^~/, os.homedir());
-          if (dir.startsWith(p)) {
+          if (dir === p || dir.startsWith(p + path.sep)) {
             graphName = gName;
             break;
           }
         }
         if (graphName !== null) break;
       }
-    } catch { /* no toml or parse error — still active, just no name */ }
+    } catch { /* no toml or parse error */ }
+
+    if (graphName !== null) active = true;
+
+    if (!active) {
+      cacheWrite(cacheKey, { result: null, ts: now });
+      return null;
+    }
 
     const result = graphName
       ? `🕸️ graphify:${graphName} ✓`
