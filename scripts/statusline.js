@@ -441,9 +441,28 @@ function segGraphify(data) {
       syncMarkers = ' ✓';
     }
 
-    const result = graphName
+    // 6. Surface last-extraction LLM spend (tokens + cost) from the graph
+    //    repo's analysis sidecar. graphify persists tokens + cost_usd there,
+    //    so we just read and render — no pricing logic lives here. Absent or
+    //    older sidecars (no cost_usd) degrade to the bare segment.
+    let usageSuffix = '';
+    if (groupDir) {
+      try {
+        const aPath = path.join(groupDir, 'graphify-out', '.graphify_analysis.json');
+        const a = JSON.parse(fs.readFileSync(aPath, 'utf8'));
+        const tin  = a?.tokens?.input  ?? 0;
+        const tout = a?.tokens?.output ?? 0;
+        const tot  = tin + tout;
+        if (tot > 0) {
+          usageSuffix = ` · 🪙 ${fmtNum(tot)}`;
+          if (typeof a.cost_usd === 'number') usageSuffix += ` · 💵 $${a.cost_usd.toFixed(2)}`;
+        }
+      } catch { /* no sidecar / unreadable — show bare segment */ }
+    }
+
+    const result = (graphName
       ? `🕸️ graphify:${graphName}${syncMarkers}`
-      : `🕸️ graphify${syncMarkers}`;
+      : `🕸️ graphify${syncMarkers}`) + usageSuffix;
 
     cacheWrite(cacheKey, { result, ts: now });
     return result;
